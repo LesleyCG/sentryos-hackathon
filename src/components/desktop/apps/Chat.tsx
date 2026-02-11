@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import * as Sentry from '@sentry/nextjs'
 
 interface Message {
   id: string
@@ -71,12 +72,22 @@ export function Chat() {
     e.preventDefault()
     if (!input.trim() || isLoading) return
 
+    const messageStartTime = Date.now()
+
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       content: input.trim(),
       timestamp: new Date()
     }
+
+    Sentry.logger.info('User message submitted', {
+      messageLength: userMessage.content.length,
+      conversationLength: messages.length + 1
+    })
+
+    Sentry.metrics.increment('chat_ui.message_sent', 1)
+    Sentry.metrics.gauge('chat_ui.message_length', userMessage.content.length)
 
     setMessages(prev => [...prev, userMessage])
     setInput('')
@@ -139,12 +150,20 @@ export function Chat() {
                 streamingContent += parsed.text
                 setCurrentTool(null) // Clear tool status when text starts flowing
                 // Update the streaming message
-                setMessages(prev => prev.map(msg => 
-                  msg.id === streamingMessageId 
+                setMessages(prev => prev.map(msg =>
+                  msg.id === streamingMessageId
                     ? { ...msg, content: streamingContent }
                     : msg
                 ))
               } else if (parsed.type === 'tool_start') {
+                Sentry.logger.info('Tool started in chat UI', {
+                  tool: parsed.tool
+                })
+
+                Sentry.metrics.increment('chat_ui.tool_started', 1, {
+                  tags: { tool: parsed.tool }
+                })
+
                 setCurrentTool({
                   name: parsed.tool,
                   status: 'running'
@@ -155,11 +174,31 @@ export function Chat() {
                   elapsed: parsed.elapsed
                 } : null)
               } else if (parsed.type === 'done') {
+                const responseDuration = Date.now() - messageStartTime
+
+                Sentry.logger.info('Chat response completed', {
+                  durationMs: responseDuration,
+                  responseLength: streamingContent.length
+                })
+
+                Sentry.metrics.distribution('chat_ui.response_time', responseDuration, {
+                  tags: { status: 'success' },
+                  unit: 'millisecond'
+                })
+
+                Sentry.metrics.gauge('chat_ui.response_length', streamingContent.length)
+
                 setCurrentTool(null)
               } else if (parsed.type === 'error') {
+                Sentry.logger.error('Chat error received from API', {
+                  message: parsed.message
+                })
+
+                Sentry.metrics.increment('chat_ui.error', 1)
+
                 streamingContent = 'Sorry, I encountered an error processing your request.'
-                setMessages(prev => prev.map(msg => 
-                  msg.id === streamingMessageId 
+                setMessages(prev => prev.map(msg =>
+                  msg.id === streamingMessageId
                     ? { ...msg, content: streamingContent }
                     : msg
                 ))
@@ -176,7 +215,20 @@ export function Chat() {
       if (!streamingContent) {
         setMessages(prev => prev.filter(msg => msg.id !== streamingMessageId))
       }
-    } catch {
+    } catch (error) {
+      const responseDuration = Date.now() - messageStartTime
+
+      Sentry.logger.error('Chat request failed', {
+        error: error instanceof Error ? error.message : String(error),
+        durationMs: responseDuration
+      })
+
+      Sentry.metrics.increment('chat_ui.request_failed', 1)
+      Sentry.metrics.distribution('chat_ui.response_time', responseDuration, {
+        tags: { status: 'error' },
+        unit: 'millisecond'
+      })
+
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',

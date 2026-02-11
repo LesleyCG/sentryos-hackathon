@@ -7,7 +7,8 @@ import { DesktopIcon } from './DesktopIcon'
 import { Notepad } from './apps/Notepad'
 import { FolderView, FolderItem } from './apps/FolderView'
 import { Chat } from './apps/Chat'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 
 const INSTALL_GUIDE_CONTENT = `# SentryOS Install Guide
 
@@ -58,7 +59,24 @@ function DesktopContent() {
   const { windows, openWindow } = useWindowManager()
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
 
+  useEffect(() => {
+    // Log desktop initialization
+    Sentry.logger.info('SentryOS Desktop initialized', {
+      timestamp: new Date().toISOString()
+    })
+
+    Sentry.metrics.increment('desktop.initialized', 1)
+  }, [])
+
   const openInstallGuide = () => {
+    Sentry.logger.info('Desktop icon activated', {
+      icon: 'install-guide',
+      label: 'Install Guide'
+    })
+
+    Sentry.metrics.increment('desktop.icon_opened', 1, {
+      tags: { icon: 'install-guide' }
+    })
     openWindow({
       id: 'install-guide',
       title: 'Install Guide.md',
@@ -76,6 +94,15 @@ function DesktopContent() {
   }
 
   const openChatWindow = () => {
+    Sentry.logger.info('Desktop icon activated', {
+      icon: 'chat',
+      label: 'Chat'
+    })
+
+    Sentry.metrics.increment('desktop.icon_opened', 1, {
+      tags: { icon: 'chat' }
+    })
+
     openWindow({
       id: 'chat',
       title: 'SentryOS Chat',
@@ -93,6 +120,15 @@ function DesktopContent() {
   }
 
   const openAgentsFolder = () => {
+    Sentry.logger.info('Desktop icon activated', {
+      icon: 'agents-folder',
+      label: 'Agents'
+    })
+
+    Sentry.metrics.increment('desktop.icon_opened', 1, {
+      tags: { icon: 'agents-folder' }
+    })
+
     const agentsFolderItems: FolderItem[] = []
 
     openWindow({
