@@ -65,7 +65,10 @@ function DesktopContent() {
       timestamp: new Date().toISOString()
     })
 
-    Sentry.metrics.increment('desktop.initialized', 1)
+    // Track initialization with custom metric (client-side)
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('desktop.initialized', 1)
+    }
   }, [])
 
   const openInstallGuide = () => {
@@ -74,9 +77,11 @@ function DesktopContent() {
       label: 'Install Guide'
     })
 
-    Sentry.metrics.increment('desktop.icon_opened', 1, {
-      tags: { icon: 'install-guide' }
-    })
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('desktop.icon_opened', 1, {
+        tags: { icon: 'install-guide' }
+      })
+    }
     openWindow({
       id: 'install-guide',
       title: 'Install Guide.md',
@@ -99,9 +104,11 @@ function DesktopContent() {
       label: 'Chat'
     })
 
-    Sentry.metrics.increment('desktop.icon_opened', 1, {
-      tags: { icon: 'chat' }
-    })
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('desktop.icon_opened', 1, {
+        tags: { icon: 'chat' }
+      })
+    }
 
     openWindow({
       id: 'chat',
@@ -125,9 +132,11 @@ function DesktopContent() {
       label: 'Agents'
     })
 
-    Sentry.metrics.increment('desktop.icon_opened', 1, {
-      tags: { icon: 'agents-folder' }
-    })
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('desktop.icon_opened', 1, {
+        tags: { icon: 'agents-folder' }
+      })
+    }
 
     const agentsFolderItems: FolderItem[] = []
 

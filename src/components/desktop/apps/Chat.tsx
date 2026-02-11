@@ -86,8 +86,12 @@ export function Chat() {
       conversationLength: messages.length + 1
     })
 
-    Sentry.metrics.increment('chat_ui.message_sent', 1)
-    Sentry.metrics.gauge('chat_ui.message_length', userMessage.content.length)
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('chat_ui.message_sent', 1)
+    }
+    if (Sentry.metrics?.gauge) {
+      Sentry.metrics.gauge('chat_ui.message_length', userMessage.content.length)
+    }
 
     setMessages(prev => [...prev, userMessage])
     setInput('')
@@ -160,9 +164,11 @@ export function Chat() {
                   tool: parsed.tool
                 })
 
-                Sentry.metrics.increment('chat_ui.tool_started', 1, {
-                  tags: { tool: parsed.tool }
-                })
+                if (Sentry.metrics?.increment) {
+                  Sentry.metrics.increment('chat_ui.tool_started', 1, {
+                    tags: { tool: parsed.tool }
+                  })
+                }
 
                 setCurrentTool({
                   name: parsed.tool,
@@ -181,12 +187,16 @@ export function Chat() {
                   responseLength: streamingContent.length
                 })
 
-                Sentry.metrics.distribution('chat_ui.response_time', responseDuration, {
-                  tags: { status: 'success' },
-                  unit: 'millisecond'
-                })
+                if (Sentry.metrics?.distribution) {
+                  Sentry.metrics.distribution('chat_ui.response_time', responseDuration, {
+                    tags: { status: 'success' },
+                    unit: 'millisecond'
+                  })
+                }
 
-                Sentry.metrics.gauge('chat_ui.response_length', streamingContent.length)
+                if (Sentry.metrics?.gauge) {
+                  Sentry.metrics.gauge('chat_ui.response_length', streamingContent.length)
+                }
 
                 setCurrentTool(null)
               } else if (parsed.type === 'error') {
@@ -194,7 +204,9 @@ export function Chat() {
                   message: parsed.message
                 })
 
-                Sentry.metrics.increment('chat_ui.error', 1)
+                if (Sentry.metrics?.increment) {
+                  Sentry.metrics.increment('chat_ui.error', 1)
+                }
 
                 streamingContent = 'Sorry, I encountered an error processing your request.'
                 setMessages(prev => prev.map(msg =>
@@ -223,11 +235,15 @@ export function Chat() {
         durationMs: responseDuration
       })
 
-      Sentry.metrics.increment('chat_ui.request_failed', 1)
-      Sentry.metrics.distribution('chat_ui.response_time', responseDuration, {
-        tags: { status: 'error' },
-        unit: 'millisecond'
-      })
+      if (Sentry.metrics?.increment) {
+        Sentry.metrics.increment('chat_ui.request_failed', 1)
+      }
+      if (Sentry.metrics?.distribution) {
+        Sentry.metrics.distribution('chat_ui.response_time', responseDuration, {
+          tags: { status: 'error' },
+          unit: 'millisecond'
+        })
+      }
 
       const errorMessage: Message = {
         id: crypto.randomUUID(),

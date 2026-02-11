@@ -38,9 +38,11 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       windowIcon: window.icon
     })
 
-    Sentry.metrics.increment('window.opened', 1, {
-      tags: { windowId: window.id }
-    })
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('window.opened', 1, {
+        tags: { windowId: window.id }
+      })
+    }
 
     setTopZIndex(currentZ => {
       const newZ = currentZ + 1
@@ -68,7 +70,9 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         }
 
         const newWindowCount = prev.length + 1
-        Sentry.metrics.gauge('window.count', newWindowCount)
+        if (Sentry.metrics?.gauge) {
+          Sentry.metrics.gauge('window.count', newWindowCount)
+        }
 
         return [
           ...prev.map(w => ({ ...w, isFocused: false })),
@@ -84,13 +88,17 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       windowId: id
     })
 
-    Sentry.metrics.increment('window.closed', 1, {
-      tags: { windowId: id }
-    })
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('window.closed', 1, {
+        tags: { windowId: id }
+      })
+    }
 
     setWindows(prev => {
       const newWindowCount = prev.length - 1
-      Sentry.metrics.gauge('window.count', newWindowCount)
+      if (Sentry.metrics?.gauge) {
+        Sentry.metrics.gauge('window.count', newWindowCount)
+      }
       return prev.filter(w => w.id !== id)
     })
   }, [])
@@ -100,9 +108,11 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       windowId: id
     })
 
-    Sentry.metrics.increment('window.minimized', 1, {
-      tags: { windowId: id }
-    })
+    if (Sentry.metrics?.increment) {
+      Sentry.metrics.increment('window.minimized', 1, {
+        tags: { windowId: id }
+      })
+    }
 
     setWindows(prev => prev.map(w =>
       w.id === id ? { ...w, isMinimized: true, isFocused: false } : w
@@ -118,12 +128,14 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         windowId: id
       })
 
-      Sentry.metrics.increment('window.maximized', 1, {
-        tags: {
-          windowId: id,
-          action: isMaximizing ? 'maximize' : 'restore'
-        }
-      })
+      if (Sentry.metrics?.increment) {
+        Sentry.metrics.increment('window.maximized', 1, {
+          tags: {
+            windowId: id,
+            action: isMaximizing ? 'maximize' : 'restore'
+          }
+        })
+      }
 
       return prev.map(w =>
         w.id === id ? { ...w, isMaximized: !w.isMaximized } : w
